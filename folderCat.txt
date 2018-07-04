@@ -1,0 +1,5 @@
+/Processed Items/Investments/
+/Meeting Notes
+/Processed Items/Investments
+/Processed Items/Insurance
+/Processed Items
