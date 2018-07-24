@@ -4,6 +4,9 @@ from filingFunc import *
 from tkinter import *
 import tkinter.messagebox
 
+# -- START --
+# -- END --
+
 # the source/dest docs
 sourcedoc= [line.rstrip() for line in open('source.txt')]
 destinations = [line.rstrip() for line in open('dest.txt')]
@@ -216,6 +219,13 @@ def firstTimeStart():
     confirmButt = Button(confirmFrame, text="Update All", command=confirmClose)
     confirmButt.pack()
 
+toFileDest = []
+toFileButton = []
+
+def openFolder():
+    win = Toplevel()
+    for each in range(len(toFile)):
+        toFileButton
 
 def main():
     if os.stat("source.txt").st_size == 0 or os.stat("dest.txt").st_size == 0:
@@ -330,4 +340,3 @@ if os.stat("source.txt").st_size == 0:
 
 scrollbar.config(command=output.yview)
 root.mainloop()
-

@@ -8,7 +8,7 @@ import tkinter.messagebox
 investmentOpts = ["OPEN", "RRSP", "TFSA", "RESP", "LRSP", "LIRA", "RRIF", "SRSP"]
 meetingOpts = ["Meeting Notes", "meeting notes", "Meeting notes"]
 profileOpts = ["Investor Profile", "Investor profile", "investor profile"]
-insuranceOpts = ["Equitable", "BMO"]
+insuranceOpts = ["Equitable", "BMO", "GWL"]
 otherStuff = ["Processed Items"]
 allOptions = investmentOpts + meetingOpts + profileOpts + insuranceOpts
 allplusOther = otherStuff + allOptions
@@ -31,7 +31,6 @@ def findType(fileName, dest):
     if index == -1:
         # The file is neither investment/investor profile/meeting notes
         return "N/A"
-
     # find client's name from dest
     clientName = dest[dest.rfind('/')+1:]
     # find the indivs name
@@ -44,46 +43,39 @@ def findType(fileName, dest):
     if fileType in investmentOpts:
         found = 0
         indivName = clientName
-        if "and" in clientName and "and" in name:
-            dest += categories[0] + fileType
+        if " and " in clientName and " and " in name:
+            files = os.listdir(dest+categories[0])
+            for each in files:
+                if "and" in each or "joint" in each or "Joint" in each:
+                    clientName = each
+            dest += categories[0] + clientName + '/' + fileType
             if not os.path.isdir(dest):
                 os.makedirs(dest)
-        elif "and" in clientName:
+                print("NEW FOLDER: "+dest)
+        elif " and " in clientName:
             indivName = findIndivName(fileName, dest, clientName, investmentOpts)
             if indivName == "N/A":
                 return "N/A"
-            # finds name via files
-            files = os.listdir(dest+categories[0])
-            for f in files:
-                if indivName in f:
-                    if os.path.isdir(f):
-                        dest += categories[0] + '/' + f
-                        found =1
-                        break
-            # finds name via directories
-            if found ==0:
-                for root, dirs, files in os.walk(dest+categories[0]):
-                    for each in files:
-                        if (fileType in each) and (indivName in each):
-                            dest = root.replace("\\","/")
-                            break
-                    if (fileType in root[len(dest):]) and (indivName in root[len(dest):]):
-                        dest = root.replace("\\","/")
-                        break
+            dest += categories[0] + indivName + '/' + fileType
+
             # creates a folder if none found
             if dest == original:
                 dest += categories[0] + indivName + '/' + fileType
                 if not os.path.isdir(dest):
                     os.makedirs(dest)
+                    print("NEW FOLDER: "+dest)
         else:
             dest += categories[0] + fileType
             # Creates a new folder if there is no OPEN/RRSP/.. folder
             if not os.path.isdir(dest):
                 os.makedirs(dest)
+                print("NEW FOLDER: "+dest)
     elif fileType in meetingOpts:
+        if not os.path.isdir(dest + categories[1]):
+            return "N/A"
         dest += categories[1]
     elif fileType in profileOpts:
-        if "and" in clientName:
+        if " and " in clientName:
             indivName = findIndivName(fileName, dest, clientName, investmentOpts)
             if indivName == "N/A":
                 return "N/A"
@@ -94,12 +86,10 @@ def findType(fileName, dest):
         # find the appropriate folder
         # go through the files and sees where the owner's insurance thing is at
 
-        if "and" in clientName and "and" in name:
+        if " and " in clientName and " and " in name:
             indivName = clientName
-        elif "and" in clientName:
-            indivName = findIndivName(fileName, dest, clientName, insuranceOpts)
         else:
-            indivName = clientName
+            indivName = findIndivName(fileName, dest, clientName, insuranceOpts)
         for root, dirs, files in os.walk(dest+categories[3]):
             # finds a file with a similar name
             for each in files:
@@ -112,11 +102,12 @@ def findType(fileName, dest):
                 break
         # if it cant find a directory, makes one
         if dest == original:
-            if "and" in clientName:
+            if " and " in clientName:
                 dest += categories[3]+'/'+indivName+'/'+fileType
             else:
                 dest += categories[3]+'/'+fileType
             os.makedirs(dest)
+            print("NEW FOLDER: "+dest)
     else:
         return "N/A"
     
@@ -157,6 +148,7 @@ def findNamefromFileName(fileName):
 def findIndivName(fileName, path, clientName, investORinsure):
     # path includes clientName
     name = findNamefromFileName(fileName)
+    print(name)
     categories = [line.rstrip() for line in open('folderCat.txt')]
     destinations =[line.rstrip() for line in open('dest.txt')]
 
@@ -164,62 +156,84 @@ def findIndivName(fileName, path, clientName, investORinsure):
         fileType = categories[0]
     else:
         fileType = categories[3]
-    fileType = fileType.replace("/","\\")
     altname = ""
     # finds a file with a similar name:
-    for root, dirs, files in os.walk(path+'\\'+fileType):
-        for each in files:
-            if (name in each):
+    for root, dirs, files in os.walk(path+fileType):
+        if " and " not in name:
+            for each in files:
+                if (name in each) and " and " not in each:
+                    altname = root
+                    break
+            # finds a directory with similar name
+            print(root)
+            if (name in root[len(path+fileType):]) and clientName not in root[len(path+fileType):]:
                 altname = root
                 break
-        # finds a directory with similar name
-        if (name in root[len(path):]):
-            altname = root
-            break
+        else:
+            for each in files:
+                if (name in each):
+                    altname = root
+                    break
+            # finds a directory with similar name
+            if (name in root[len(path+fileType):]) or "joint" in root[len(path+fileType):] or "Joint" in root[len(path+fileType):]:
+                altname = root
+                break
+    
     if altname == "":
-        return "N/A"
+        if investORinsure == investmentOpts:
+            os.makedirs(path+fileType+'/'+name)
+            print("NEW FOLDER: "+path+fileType+'/'+name)
+            return name
+        else:
+            os.makedirs(path+'/'+fileType+'/'+name)
+            print("NEW FOLDER: "+path+'/'+fileType+'/'+name)
+            return name
     altname = altname.replace("\\", '/')
     if investORinsure == investmentOpts:
-        altname = altname[len(path+fileType+'/'):]
+        altname = altname[len(path+fileType):]
     else:
-        altname = altname[len(path+'/'+fileType+'/'):]
-    fileType = ""
-    for each in investORinsure:
-        if each in altname:
-            fileType = each
-    altname = altname.replace('\\','/')
-    if fileType != "":
-        index = altname.find("/")
-        if index != -1:
-            altname = altname[:index]
+        altname = altname[len(path+'/'+fileType):]
+    print(altname)
+    index = altname.find("/")
+    if index != -1:
+        altname = altname[:index]
     if altname == "":
         return "N/A"
     return altname
 
+def findViaNameFirst(name, path):
+    files = os.listdir(path)
+    nameList = name.split()
+    newName = []
+    for f in files:
+        for each in nameList:
+            if each in f:
+                    newName.append(each)
+        if set(newName) == set(nameList):
+            return f
+        newName.clear()
+    return ""
+
 def findAlternateName(name, path):
     altname = ""
+    altname = findViaNameFirst(name, path)
+    if altname != "":
+        return path + '/' + altname
     # finds a file with a similar name:
     for root, dirs, files in os.walk(path):
         for each in files:
-            if name in each:
+            if name in each and "Nancy Lee" not in root:
                 altname = root
                 break
     # finds where the file is stored:
     if altname == "":
         return "N/A"
-
-    for each in allplusOther:
-        nameend = altname.find(each,len(path)+1)
-        if nameend != -1:
-            break;
+    altname = altname.replace('\\', '/')
+    nameend = altname.find('/',len(path)+1)
     if nameend == -1:
         return "N/A"
-    name = altname[len(path)+1:nameend-1]
-    namelist = list(name)
-    for each in range(len(namelist)):
-        if namelist[each] == '\\':
-            namelist[each] = '/'
-    name = "".join(namelist)
+    name = altname[len(path)+1:nameend]
     if os.path.isdir(path):
+        print(path+'/'+name)
         return path+'/'+name
     return "N/A"
